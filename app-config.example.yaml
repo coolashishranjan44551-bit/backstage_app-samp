@@ -1,0 +1,77 @@
+app:
+  title: Backstage AKS Portal
+  baseUrl: http://localhost:7007
+
+backend:
+  baseUrl: http://localhost:7007
+  listen:
+    port: 7007
+    host: 0.0.0.0
+  database:
+    client: pg
+    connection:
+      host: ${PG_HOST:-localhost}
+      port: ${PG_PORT:-5432}
+      user: ${PG_USER:-postgres}
+      password: ${PG_PASSWORD:-postgres}
+      database: ${PG_DB:-backstage}
+  cors:
+    origin: "*"
+
+integrations:
+  github:
+    - host: github.com
+      token: ${GITHUB_TOKEN:-}
+  azure:
+    - host: dev.azure.com
+      token: ${AZURE_DEVOPS_TOKEN:-}
+  grafana:
+    - name: grafana
+      url: ${GRAFANA_URL:-http://grafana.local}
+      apiKey: ${GRAFANA_API_KEY:-}
+
+proxy:
+  "/azure-devops-api":
+    target: https://dev.azure.com/
+    changeOrigin: true
+    secure: true
+  "/grafana-api":
+    target: ${GRAFANA_URL:-http://grafana.local}
+    changeOrigin: true
+    secure: true
+
+techdocs:
+  builder: local
+  generator:
+    runIn: docker
+  publisher:
+    type: local
+
+catalog:
+  providers:
+    azureDevOps:
+      host: dev.azure.com
+      organization: ${AZURE_DEVOPS_ORG:-example-org}
+      project: ${AZURE_DEVOPS_PROJECT:-example-project}
+      schedule:
+        frequency: { minutes: 30 }
+        timeout: { minutes: 5 }
+  locations:
+    - type: url
+      target: https://github.com/backstage/backstage/blob/master/packages/catalog-model/examples/all.yaml
+    - type: azure/api
+      target: https://dev.azure.com/${AZURE_DEVOPS_ORG:-example-org}/${AZURE_DEVOPS_PROJECT:-example-project}/_apis/git/repositories
+      rules:
+        - allow: [Component, API, System, Domain]
+
+kubernetes:
+  serviceLocatorMethod: multiTenant
+  clusterLocatorMethods:
+    - type: config
+      clusters:
+        - name: aks
+          url: https://kubernetes.default.svc
+          authProvider: serviceAccount
+          skipTLSVerify: true
+          serviceAccountToken: ${K8S_SERVICE_ACCOUNT_TOKEN:-}
+          caData: ${K8S_CA_DATA:-}
