@@ -14,11 +14,6 @@ RUN apt-get update && apt-get install -y --no-install-recommends git python3 mak
 WORKDIR ${APP_DIR}
 RUN git clone --depth=1 --branch ${DEMO_REF} ${DEMO_REPO} .
 
-# Bring in the custom configuration and sample content from this repo
-COPY app-config*.yaml ./
-COPY catalog-info.plugins.yaml ./catalog-info.yaml
-COPY docs ./docs
-
 # Install and build the Backstage app
 RUN yarn install --frozen-lockfile
 RUN yarn tsc
