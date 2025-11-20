@@ -1,0 +1,112 @@
+app:
+  title: Backstage AKS Portal
+  baseUrl: http://localhost:7007
+
+backend:
+  baseUrl: http://localhost:7007
+  listen:
+    port: 7007
+    host: 0.0.0.0
+  database:
+    client: pg
+    connection:
+      host: ${PG_HOST:-localhost}
+      port: ${PG_PORT:-5432}
+      user: ${PG_USER:-postgres}
+      password: ${PG_PASSWORD:-postgres}
+      database: ${PG_DB:-backstage}
+  cors:
+    origin: "*"
+
+auth:
+  environment: development
+  providers:
+    github:
+      development:
+        clientId: ${GITHUB_OAUTH_CLIENT_ID:-}
+        clientSecret: ${GITHUB_OAUTH_CLIENT_SECRET:-}
+    microsoft:
+      development:
+        clientId: ${MICROSOFT_CLIENT_ID:-}
+        clientSecret: ${MICROSOFT_CLIENT_SECRET:-}
+        tenantId: ${AZURE_TENANT_ID:-common}
+        authorizationUrl: https://login.microsoftonline.com/${AZURE_TENANT_ID:-common}/oauth2/v2.0/authorize
+        tokenUrl: https://login.microsoftonline.com/${AZURE_TENANT_ID:-common}/oauth2/v2.0/token
+
+integrations:
+  github:
+    - host: github.com
+      token: ${GITHUB_TOKEN:-}
+  azure:
+    - host: dev.azure.com
+      token: ${AZURE_DEVOPS_TOKEN:-}
+  grafana:
+    - name: grafana
+      url: ${GRAFANA_URL:-http://grafana.local}
+      apiKey: ${GRAFANA_API_KEY:-}
+
+azureDevOps:
+  host: dev.azure.com
+  organization: ${AZURE_DEVOPS_ORG:-example-org}
+  project: ${AZURE_DEVOPS_PROJECT:-example-project}
+  proxyPath: /azure-devops-api
+
+grafana:
+  domain: ${GRAFANA_URL_HOSTNAME:-grafana.local}
+
+proxy:
+  "/azure-devops-api":
+    target: https://dev.azure.com/
+    changeOrigin: true
+    secure: true
+  "/grafana-api":
+    target: ${GRAFANA_URL:-http://grafana.local}
+    changeOrigin: true
+    secure: true
+
+techdocs:
+  builder: local
+  generator:
+    runIn: docker
+  publisher:
+    type: local
+
+catalog:
+  processingInterval: { minutes: 1 }
+  providers:
+    azureDevOps:
+      host: dev.azure.com
+      organization: ${AZURE_DEVOPS_ORG:-example-org}
+      project: ${AZURE_DEVOPS_PROJECT:-example-project}
+      schedule:
+        frequency: { minutes: 30 }
+        timeout: { minutes: 5 }
+    github:
+      providerId: public
+      githubUrl: https://github.com
+      schedule:
+        frequency: { minutes: 30 }
+        timeout: { minutes: 5 }
+  locations:
+    - type: url
+      target: https://github.com/backstage/backstage/blob/master/packages/catalog-model/examples/all.yaml
+    - type: azure/api
+      target: https://dev.azure.com/${AZURE_DEVOPS_ORG:-example-org}/${AZURE_DEVOPS_PROJECT:-example-project}/_apis/git/repositories
+      rules:
+        - allow: [Component, API, System, Domain]
+    - type: file
+      target: ./catalog-info.yaml
+      rules:
+        - allow: [Component, Resource]
+
+kubernetes:
+  serviceLocatorMethod: multiTenant
+  clusterLocatorMethods:
+    - type: config
+      clusters:
+        - name: aks
+          url: https://kubernetes.default.svc
+          authProvider: serviceAccount
+          skipTLSVerify: true
+          serviceAccountToken: ${K8S_SERVICE_ACCOUNT_TOKEN:-}
+          caData: ${K8S_CA_DATA:-}

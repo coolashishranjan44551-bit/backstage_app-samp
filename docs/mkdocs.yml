@@ -1,0 +1,5 @@
+site_name: AKS Sample Service Docs
+nav:
+  - Home: index.md
+plugins:
+  - techdocs-core
