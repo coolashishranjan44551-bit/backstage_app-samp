@@ -7,40 +7,27 @@ This repository packages the official [Backstage demo](https://github.com/backst
 - **app-config.example.yaml** and **app-config.production.yaml** tuned for AKS (PostgreSQL, Azure DevOps, TechDocs, Kubernetes plugin).
 - **Plugin-ready configs** for Azure DevOps (catalog + pipelines), Grafana dashboard links, Git repos (GitHub and Azure DevOps), Kubernetes AKS status, and TechDocs.
 - **helm/values-backstage.yaml** to deploy via the Backstage Helm chart with NGINX ingress and external PostgreSQL secrets.
-- **catalog-info.plugins.yaml** and **docs/** showing a complete entity annotated for Azure DevOps pipelines, Grafana dashboards, Kubernetes, Git source, and TechDocs.
 
 ## Prerequisites
 - Azure CLI authenticated and authorized for AKS, ACR, and PostgreSQL.
 - Docker / BuildKit, kubectl, and Helm.
 - Optional: [Azure Workload Identity](https://azure.github.io/azure-workload-identity/docs/introduction.html) for the Kubernetes plugin.
 
-## 1) Scaffold the full Backstage app with plugins
-Run the helper script to generate the Backstage codebase, install the plugins, and apply the pre-built UI/route templates. The script assumes internet access to npm/yarn (our sandbox blocks this, so run it in your environment):
+## 1) Build the Backstage container
+The Dockerfile pulls the Backstage demo repo and builds the backend bundle. Customize `DEMO_REF` to pin a tag.
 
 ```bash
-./scripts/bootstrap-cnhi-backstage.sh
-# optionally override APP_DIR or APP_NAME
-APP_DIR=my-portal ./scripts/bootstrap-cnhi-backstage.sh
-```
+# Build
+docker build -t <acr-name>.azurecr.io/backstage-demo:v1 \
+  --build-arg DEMO_REF=v1.30.0 \
+  .
 
-The script performs:
-- `npx @backstage/create-app --name cnhi-backstage`
-- Installs **Azure DevOps Pipelines, Grafana, Kubernetes, Git repos (via integrations), and TechDocs** plugins in app + backend
-- Replaces `packages/app/src/App.tsx` and `packages/app/src/components/Root/Root.tsx` with routes/sidebar entries for the five plugins
-- Copies this repo’s Backstage configs, TechDocs docs, and Kubernetes manifests into the generated app
-- Drops a backend Dockerfile at `packages/backend/Dockerfile`
-
-## 2) Build and push the container
-After the scaffold script runs, build from the generated repo (defaults to `cnhi-backstage`):
-
-```bash
-cd cnhi-backstage
-docker build -t <acr-name>.azurecr.io/backstage:latest -f packages/backend/Dockerfile .
+# Push to ACR
 az acr login --name <acr-name>
-docker push <acr-name>.azurecr.io/backstage:latest
+docker push <acr-name>.azurecr.io/backstage-demo:v1
 ```
 
-## 3) Prepare AKS and database
+## 2) Prepare AKS and database
 ```bash
 RESOURCE_GROUP=rg-backstage
 AKS_NAME=aks-backstage
@@ -64,20 +51,6 @@ kubectl create secret generic backstage-db -n portal \
   --from-literal=database=$PG_DB \
   --from-literal=user=$PG_USER \
   --from-literal=password=$PG_PASSWORD
-
-# Optional secret with plugin tokens/keys
-kubectl create secret generic backstage-secrets -n portal \
-  --from-literal=azureDevOpsToken=<PAT> \
-  --from-literal=azureSubscriptionId=<subscription-id> \
-  --from-literal=azureTenantId=<tenant-id> \
-  --from-literal=githubToken=<gh-token> \
-  --from-literal=githubClientId=<oauth-client-id> \
-  --from-literal=githubClientSecret=<oauth-client-secret> \
-  --from-literal=microsoftClientId=<aad-client-id> \
-  --from-literal=microsoftClientSecret=<aad-client-secret> \
-  --from-literal=grafanaApiKey=<grafana-api-key> \
-  --from-literal=techdocsAccount=<storage-account> \
-  --from-literal=techdocsAccountKey=<storage-key>
 ```
 
 ## 3) Deploy NGINX ingress and Backstage via Helm
@@ -109,7 +82,6 @@ kubectl get ingress -n portal
 - Provide `GITHUB_TOKEN` when importing GitHub repositories into the catalog.
 - Provide `GRAFANA_URL` and `GRAFANA_API_KEY` so catalog entities annotated with Grafana dashboards can render links.
 - For the Kubernetes plugin on AKS, prefer Azure Workload Identity and set `AZURE_SUBSCRIPTION_ID` and `AZURE_TENANT_ID`.
-- Configure optional OAuth clients for sign-in (`GITHUB_OAUTH_CLIENT_ID/SECRET`, `MICROSOFT_CLIENT_ID/SECRET`, `AZURE_TENANT_ID`).
 
 ## 5) Plugin configuration
 - **Azure DevOps pipelines & repos**: set `AZURE_DEVOPS_TOKEN`, `AZURE_DEVOPS_ORG`, and `AZURE_DEVOPS_PROJECT`. The catalog provider will ingest services from the project repos, and the proxy at `/azure-devops-api` lets the Azure DevOps plugin fetch pipeline status.
@@ -117,10 +89,6 @@ kubectl get ingress -n portal
 - **Git repos (GitHub + Azure DevOps)**: supply `GITHUB_TOKEN` for GitHub entities, and Backstage will use the same Azure DevOps token above for DevOps repos. Add your repos to `catalog.locations` or rely on the Azure DevOps provider.
 - **Kubernetes (AKS status)**: configure `AZURE_SUBSCRIPTION_ID` and `AZURE_TENANT_ID`; use Azure Workload Identity for the pod service account to enable read-only cluster visibility via the Kubernetes plugin.
 - **TechDocs**: set Azure Blob Storage variables and annotate catalog entities with `backstage.io/techdocs-ref` to host docs via TechDocs.
-
-## 6) Plugin sample content
-- `catalog-info.plugins.yaml` defines a service with Azure DevOps pipeline annotations, a Grafana dashboard UID, AKS label selector, Git source reference, and TechDocs link so you can import it immediately.
-- `docs/` contains a TechDocs-ready MkDocs site for the same sample service. The Dockerfile copies these files into the image so you can `register` the entity and `techdocs-cli generate` without extra setup.
 
 ## Notes
 - The container runs as non-root UID `10001` and listens on port `7007`.

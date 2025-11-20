@@ -18,21 +18,6 @@ backend:
   cors:
     origin: "*"
 
-auth:
-  environment: development
-  providers:
-    github:
-      development:
-        clientId: ${GITHUB_OAUTH_CLIENT_ID:-}
-        clientSecret: ${GITHUB_OAUTH_CLIENT_SECRET:-}
-    microsoft:
-      development:
-        clientId: ${MICROSOFT_CLIENT_ID:-}
-        clientSecret: ${MICROSOFT_CLIENT_SECRET:-}
-        tenantId: ${AZURE_TENANT_ID:-common}
-        authorizationUrl: https://login.microsoftonline.com/${AZURE_TENANT_ID:-common}/oauth2/v2.0/authorize
-        tokenUrl: https://login.microsoftonline.com/${AZURE_TENANT_ID:-common}/oauth2/v2.0/token
-
 integrations:
   github:
     - host: github.com
@@ -44,15 +29,6 @@ integrations:
     - name: grafana
       url: ${GRAFANA_URL:-http://grafana.local}
       apiKey: ${GRAFANA_API_KEY:-}
-
-azureDevOps:
-  host: dev.azure.com
-  organization: ${AZURE_DEVOPS_ORG:-example-org}
-  project: ${AZURE_DEVOPS_PROJECT:-example-project}
-  proxyPath: /azure-devops-api
-
-grafana:
-  domain: ${GRAFANA_URL_HOSTNAME:-grafana.local}
 
 proxy:
   "/azure-devops-api":
@@ -72,18 +48,11 @@ techdocs:
     type: local
 
 catalog:
-  processingInterval: { minutes: 1 }
   providers:
     azureDevOps:
       host: dev.azure.com
       organization: ${AZURE_DEVOPS_ORG:-example-org}
       project: ${AZURE_DEVOPS_PROJECT:-example-project}
-      schedule:
-        frequency: { minutes: 30 }
-        timeout: { minutes: 5 }
-    github:
-      providerId: public
-      githubUrl: https://github.com
       schedule:
         frequency: { minutes: 30 }
         timeout: { minutes: 5 }
@@ -94,10 +63,6 @@ catalog:
       target: https://dev.azure.com/${AZURE_DEVOPS_ORG:-example-org}/${AZURE_DEVOPS_PROJECT:-example-project}/_apis/git/repositories
       rules:
         - allow: [Component, API, System, Domain]
-    - type: file
-      target: ./catalog-info.yaml
-      rules:
-        - allow: [Component, Resource]
 
 kubernetes:
   serviceLocatorMethod: multiTenant
