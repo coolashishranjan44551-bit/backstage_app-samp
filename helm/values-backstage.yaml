@@ -1,0 +1,117 @@
+image:
+  repository: <acr-name>.azurecr.io/backstage-demo
+  tag: v1
+  pullPolicy: IfNotPresent
+  pullSecrets:
+    - name: acr-pull
+
+service:
+  type: ClusterIP
+  port: 7007
+
+ingress:
+  enabled: true
+  className: nginx
+  annotations:
+    kubernetes.io/ingress.class: nginx
+  hosts:
+    - host: portal.example.com
+      paths:
+        - path: /
+          pathType: Prefix
+  tls:
+    - hosts:
+        - portal.example.com
+      secretName: portal-tls
+
+extraEnvVars:
+  - name: PG_HOST
+    valueFrom:
+      secretKeyRef:
+        name: backstage-db
+        key: host
+  - name: PG_USER
+    valueFrom:
+      secretKeyRef:
+        name: backstage-db
+        key: user
+  - name: PG_PASSWORD
+    valueFrom:
+      secretKeyRef:
+        name: backstage-db
+        key: password
+  - name: PG_DB
+    valueFrom:
+      secretKeyRef:
+        name: backstage-db
+        key: database
+  - name: PG_PORT
+    value: "5432"
+  - name: PORTAL_HOSTNAME
+    value: portal.example.com
+  - name: AZURE_DEVOPS_TOKEN
+    valueFrom:
+      secretKeyRef:
+        name: backstage-secrets
+        key: azureDevOpsToken
+  - name: AZURE_DEVOPS_ORG
+    value: example-org
+  - name: AZURE_DEVOPS_PROJECT
+    value: example-project
+  - name: AZURE_SUBSCRIPTION_ID
+    valueFrom:
+      secretKeyRef:
+        name: backstage-secrets
+        key: azureSubscriptionId
+  - name: AZURE_TENANT_ID
+    valueFrom:
+      secretKeyRef:
+        name: backstage-secrets
+        key: azureTenantId
+  - name: GITHUB_TOKEN
+    valueFrom:
+      secretKeyRef:
+        name: backstage-secrets
+        key: githubToken
+  - name: GITHUB_OAUTH_CLIENT_ID
+    valueFrom:
+      secretKeyRef:
+        name: backstage-secrets
+        key: githubClientId
+  - name: GITHUB_OAUTH_CLIENT_SECRET
+    valueFrom:
+      secretKeyRef:
+        name: backstage-secrets
+        key: githubClientSecret
+  - name: MICROSOFT_CLIENT_ID
+    valueFrom:
+      secretKeyRef:
+        name: backstage-secrets
+        key: microsoftClientId
+  - name: MICROSOFT_CLIENT_SECRET
+    valueFrom:
+      secretKeyRef:
+        name: backstage-secrets
+        key: microsoftClientSecret
+  - name: GRAFANA_URL
+    value: https://grafana.example.com
+  - name: GRAFANA_API_KEY
+    valueFrom:
+      secretKeyRef:
+        name: backstage-secrets
+        key: grafanaApiKey
+  - name: TECHDOCS_AZURE_ACCOUNT
+    valueFrom:
+      secretKeyRef:
+        name: backstage-secrets
+        key: techdocsAccount
+  - name: TECHDOCS_AZURE_KEY
+    valueFrom:
+      secretKeyRef:
+        name: backstage-secrets
+        key: techdocsAccountKey
+  - name: TECHDOCS_AZURE_CONTAINER
+    value: techdocs
+
+postgresql:
+  enabled: false

@@ -1,0 +1,31 @@
+apiVersion: backstage.io/v1alpha1
+kind: Component
+metadata:
+  name: aks-sample-service
+  description: Sample service showing Azure DevOps, Grafana, Kubernetes, Git, and TechDocs wiring.
+  annotations:
+    backstage.io/source-location: url:https://github.com/example-org/aks-sample-service
+    azure-devops/project: ${AZURE_DEVOPS_PROJECT:-example-project}
+    azure-devops/repo: aks-sample-service
+    azure-devops/build-definition: 42
+    grafana/dashboard-uid: lXFD823Vz
+    backstage.io/kubernetes-label-selector: "app=aks-sample-service"
+    backstage.io/techdocs-ref: dir:./docs
+spec:
+  type: service
+  owner: team-platform
+  lifecycle: production
+  providesApis: []
+  consumesApis: []
+---
+apiVersion: backstage.io/v1alpha1
+kind: Resource
+metadata:
+  name: aks-sample-service-cluster
+  description: AKS namespace used by the sample service.
+  annotations:
+    backstage.io/kubernetes-namespace: aks-sample
+spec:
+  type: kubernetes-namespace
+  owner: team-platform
+  system: aks-sample-service

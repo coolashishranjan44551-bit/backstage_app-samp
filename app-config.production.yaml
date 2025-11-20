@@ -1,0 +1,103 @@
+app:
+  baseUrl: https://${PORTAL_HOSTNAME}
+
+backend:
+  baseUrl: https://${PORTAL_HOSTNAME}
+  listen:
+    port: 7007
+    host: 0.0.0.0
+  database:
+    client: pg
+    connection:
+      host: ${PG_HOST}
+      port: ${PG_PORT}
+      user: ${PG_USER}
+      password: ${PG_PASSWORD}
+      database: ${PG_DB}
+      ssl: { rejectUnauthorized: false }
+  cors:
+    origin: "https://${PORTAL_HOSTNAME}"
+
+auth:
+  environment: production
+  providers:
+    github:
+      production:
+        clientId: ${GITHUB_OAUTH_CLIENT_ID}
+        clientSecret: ${GITHUB_OAUTH_CLIENT_SECRET}
+    microsoft:
+      production:
+        clientId: ${MICROSOFT_CLIENT_ID}
+        clientSecret: ${MICROSOFT_CLIENT_SECRET}
+        tenantId: ${AZURE_TENANT_ID}
+        authorizationUrl: https://login.microsoftonline.com/${AZURE_TENANT_ID}/oauth2/v2.0/authorize
+        tokenUrl: https://login.microsoftonline.com/${AZURE_TENANT_ID}/oauth2/v2.0/token
+
+integrations:
+  github:
+    - host: github.com
+      token: ${GITHUB_TOKEN}
+  azure:
+    - host: dev.azure.com
+      token: ${AZURE_DEVOPS_TOKEN}
+  grafana:
+    - name: grafana
+      url: ${GRAFANA_URL}
+      apiKey: ${GRAFANA_API_KEY}
+
+azureDevOps:
+  host: dev.azure.com
+  organization: ${AZURE_DEVOPS_ORG}
+  project: ${AZURE_DEVOPS_PROJECT}
+  proxyPath: /azure-devops-api
+
+grafana:
+  domain: ${GRAFANA_URL_HOSTNAME}
+
+techdocs:
+  builder: "local"
+  generator:
+    runIn: "docker"
+  publisher:
+    type: "azureBlobStorage"
+    azureBlobStorage:
+      containerName: ${TECHDOCS_AZURE_CONTAINER:-techdocs}
+      credentials:
+        accountName: ${TECHDOCS_AZURE_ACCOUNT}
+        accountKey: ${TECHDOCS_AZURE_KEY}
+
+catalog:
+  processingInterval: { minutes: 1 }
+  providers:
+    azureDevOps:
+      host: dev.azure.com
+      organization: ${AZURE_DEVOPS_ORG}
+      project: ${AZURE_DEVOPS_PROJECT}
+      schedule:
+        frequency: { minutes: 30 }
+        timeout: { minutes: 5 }
+    github:
+      providerId: public
+      githubUrl: https://github.com
+      schedule:
+        frequency: { minutes: 30 }
+        timeout: { minutes: 5 }
+  locations:
+    - type: url
+      target: ${CATALOG_LOCATION_1:-https://github.com/backstage/backstage/blob/master/packages/catalog-model/examples/all.yaml}
+    - type: azure/api
+      target: https://dev.azure.com/${AZURE_DEVOPS_ORG}/${AZURE_DEVOPS_PROJECT}/_apis/git/repositories
+      rules:
+        - allow: [Component, API, System, Domain]
+    - type: file
+      target: ./catalog-info.yaml
+      rules:
+        - allow: [Component, Resource]
+
+kubernetes:
+  serviceLocatorMethod: multiTenant
+  clusterLocatorMethods:
+    - type: azure
+      authProvider: azureWorkloadIdentity
+      subscriptionId: ${AZURE_SUBSCRIPTION_ID}
+      tenantId: ${AZURE_TENANT_ID}
